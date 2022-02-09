@@ -9,7 +9,7 @@ client2_guess_board = [[empty for _ in range(10)] for _ in range(10)]
 
 HEADERSIZE = 10
 
-IP = "YOUR LOCAL IP"
+IP = "YOUR LOCAL IP HERE"
 PORT = 1234
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -80,7 +80,9 @@ def turns(client_socket, client_guess_board, opponent_board, opponent_guess_boar
     hit = check_hit(client_move_x, client_move_y, opponent_board)
 
     if hit == "hit":
-        client_guess_board[client_move_y][client_move_x] = "X"
+        client_guess_board[client_move_y][client_move_x] = "x"
+    else:
+        client_guess_board[client_move_y][client_move_x] = "o"
 
     hit = hit.encode("utf-8")
     message = f"{len(hit):<{HEADERSIZE}}".encode("utf-8") + hit
