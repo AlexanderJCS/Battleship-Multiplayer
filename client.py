@@ -2,7 +2,7 @@ import socket
 import pickle
 import copy
 import colorama
-from colorama import Fore
+from colorama import Fore, Back
 
 colorama.init(autoreset=True)
 
@@ -18,6 +18,23 @@ empty = "—"
 board = [[empty for _ in range(10)] for _ in range(10)]
 guess_board = [[empty for _ in range(10)] for _ in range(10)]
 error = False
+
+
+def merge_board(ship_board, player_guess_board):
+    output_board = [[empty for _ in range(10)] for _ in range(10)]
+    for f in range(len(ship_board)):
+        for x in range(len(ship_board)):
+            # If guess_board has a hit, make it a capital X
+            if ship_board[f][x] == "x" and player_guess_board[f][x] == "x":
+                output_board[f][x] = "X"
+
+            elif ship_board[f][x] == "x" and player_guess_board[f][x] != "x":
+                output_board[f][x] = "x"
+
+            # Transfer guess_board's misses to output board
+            elif player_guess_board[f][x] == "o":
+                output_board[f][x] = "o"
+    return output_board
 
 
 def print_board(current_board):  # Prints the board.
@@ -39,6 +56,9 @@ def print_board(current_board):  # Prints the board.
         for x in range(len(board)):
             if str(current_board[f][x]) == "x":
                 print(Fore.RED + str(current_board[f][x]), end="  ")
+
+            elif str(current_board[f][x]) == "X":
+                print(Back.RED + str(current_board[f][x]), end="  ")
 
             elif str(current_board[f][x]) == "o":
                 print(str(current_board[f][x]), end="  ")
@@ -68,7 +88,7 @@ if __name__ == "__main__":
         if start == "game start":
 
             # Let the user place ships
-            ship_lens = [2]
+            ship_lens = [5, 4, 3, 3, 2]
             for ship_len in ship_lens:
                 while True:
                     try:
@@ -154,13 +174,11 @@ if __name__ == "__main__":
 
                 while True:
                     try:
-                        # Print the player's guesses and ask for another guess
+                        # Print the player's guesses and ask for a guess
                         print("\n")
-                        print("Your ship board:")
-                        print_board(board)
-                        print()
+                        merged_board = merge_board(ship_board=board, player_guess_board=opponent_board)
                         print("Opponent's guess board:")
-                        print_board(opponent_board)
+                        print_board(merged_board)
                         print()
                         print("Your guess board:")
                         print_board(guess_board)
