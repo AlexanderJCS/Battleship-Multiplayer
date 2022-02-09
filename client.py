@@ -19,7 +19,6 @@ error = False
 
 def print_board(current_board):  # Prints the board.
     # Print numbers on the x axis
-    print("\n")
     print("0  ", end="")
     for x in range(len(board)):
         print(x + 1, end="  ")
@@ -59,7 +58,6 @@ if __name__ == "__main__":
         # Let the user place ships
         ship_lens = [5, 4, 3, 3, 2]
         for ship_len in ship_lens:
-
             while True:
                 try:
                     print_board(board)
@@ -69,6 +67,7 @@ if __name__ == "__main__":
                     move = move.split(",")
                     move_x = int(move[0].replace(" ", "")) - 1
                     move_y = int(move[1].replace(" ", "")) - 1
+                    print(f"X: {move_x} Y: {move_y}")
 
                     # Some error checks
                     if move_x < 0:
@@ -80,7 +79,7 @@ if __name__ == "__main__":
                         continue
 
                     # If the boat direciton is horizontal
-                    if direction == "horizontal" or "h":
+                    if direction == "horizontal":
                         temp_board = copy.deepcopy(board)
                         for i in range(ship_len):
                             if board[move_y][move_x + i] == "x":
@@ -88,9 +87,10 @@ if __name__ == "__main__":
                                 error = True
                                 break
                             temp_board[move_y][move_x + i] = "x"
+                            error = False
 
                     # If the boat direction is vertical
-                    elif direction == "vertical" or "v":
+                    elif direction == "vertical":
                         temp_board = copy.deepcopy(board)
                         for i in range(ship_len):
                             if temp_board[move_y + i][move_x] == "x":
@@ -98,6 +98,7 @@ if __name__ == "__main__":
                                 error = True
                                 break
                             temp_board[move_y + i][move_x] = "x"
+                            error = False
 
                     else:
                         print("Please input a ship direction of \"horizontal\" or \"vertical\".")
@@ -105,6 +106,7 @@ if __name__ == "__main__":
 
                     # If there was an error
                     if error:
+                        error = False
                         continue
 
                     board = temp_board
@@ -112,11 +114,9 @@ if __name__ == "__main__":
 
                 except ValueError:
                     print("Please input valid formatting: \"x, y\"")
-                    # error = True
 
                 except IndexError:
                     print("Ship exited the board. Please try a different placement.")
-                    # error = True
 
         msg = pickle.dumps(board)
         msg = bytes(f"{len(msg):<{HEADERSIZE}}", "utf-8") + msg
@@ -134,46 +134,53 @@ if __name__ == "__main__":
                 time.sleep(3)
                 exit()
 
-            turn = recieve(pickled=False)
-            if turn == "your turn":
-                while True:
-                    try:
-                        # Print the player's guesses and ask for another guess
-                        print_board(guess_board)
-                        move = input("Enter a guess (x, y): ")
-                        move = move.split(",")
-                        move_x = int(move[0].replace(" ", "")) - 1
-                        move_y = int(move[1].replace(" ", "")) - 1
+            opponent_board = recieve(pickled=True)
+            print("Opponent board recieved.")
 
-                        if guess_board[move_y][move_x] != empty:
-                            print("You already guessed that spot!")
-                            continue
-                        break
+            while True:
+                try:
+                    # Print the player's guesses and ask for another guess
+                    print("\n")
+                    print("Opponent's guess board:")
+                    print_board(opponent_board)
+                    print("\n"*0)
+                    print("Your guess board:")
+                    print_board(guess_board)
+                    print("\n"*0)
+                    move = input("Enter a guess (x, y): ")
+                    move = move.split(",")
+                    move_x = int(move[0].replace(" ", "")) - 1
+                    move_y = int(move[1].replace(" ", "")) - 1
 
-                    except (ValueError, IndexError):
-                        print("Please input valid formatting: \"x, y\"")
+                    if guess_board[move_y][move_x] != empty:
+                        print("You already guessed that spot!")
+                        continue
+                    break
 
-                # Send the move to the server
-                move_pickle = pickle.dumps(move)
-                msg = bytes(f"{len(move_pickle):<{HEADERSIZE}}", "utf-8") + move_pickle
-                client_socket.send(msg)
+                except (ValueError, IndexError):
+                    print("Please input valid formatting: \"x, y\"")
 
-                # Recieve the result of the move
-                result = recieve(pickled=False)
-                if result == "hit":
-                    guess_board[move_y][move_x] = "X"
+            # Send the move to the server
+            move_pickle = pickle.dumps(move)
+            msg = bytes(f"{len(move_pickle):<{HEADERSIZE}}", "utf-8") + move_pickle
+            client_socket.send(msg)
 
-                else:
-                    guess_board[move_y][move_x] = "o"
+            # Recieve the result of the move
+            result = recieve(pickled=False)
+            if result == "hit":
+                guess_board[move_y][move_x] = "X"
 
-                print_board(guess_board)
+            else:
+                guess_board[move_y][move_x] = "o"
 
-                # Recieve if you won
-                won = recieve(pickled=True)
-                if won:
-                    print("You won!")
-                    time.sleep(3)
-                    exit()
+            print_board(guess_board)
 
-                # Wait for the opponent to execute their turn
-                print("Waiting for opponent...")
+            # Recieve if you won
+            won = recieve(pickled=True)
+            if won:
+                print("You won!")
+                time.sleep(3)
+                exit()
+
+            # Wait for the opponent to execute their turn
+            print("Waiting for opponent...")
