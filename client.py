@@ -141,8 +141,11 @@ if __name__ == "__main__":
         while True:
             won = recieve(pickled=True)
             if won:
+                opponent_board = recieve(pickled=True)
+                print("\nOpponent's board:")
+                print_board(opponent_board)
                 print("You lose.")
-                time.sleep(3)
+                time.sleep(15)
                 exit()
 
             opponent_board = recieve(pickled=True)
@@ -192,8 +195,11 @@ if __name__ == "__main__":
             # Recieve if you won
             won = recieve(pickled=True)
             if won:
+                opponent_board = recieve(pickled=True)
+                print("\nOpponent's board:")
+                print_board(opponent_board)
                 print("You won!")
-                time.sleep(3)
+                time.sleep(15)
                 exit()
 
             # Wait for the opponent to execute their turn

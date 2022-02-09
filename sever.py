@@ -9,7 +9,7 @@ client2_guess_board = [[empty for _ in range(10)] for _ in range(10)]
 
 HEADERSIZE = 10
 
-IP = "YOUR LOCAL IP HERE"
+IP = "192.168.1.12"
 PORT = 1234
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,7 +63,8 @@ def win_check(current_board, guess_board):  # Check if the client won
     return True
 
 
-def turns(client_socket, client_guess_board, opponent_board, opponent_guess_board):
+def turns(client_socket, client_guess_board, opponent_board, opponent_guess_board,
+          opponent_client_socket, client_board):
     # Notify the client it is their turn
     message = opponent_guess_board
     message = pickle.dumps(message)
@@ -94,6 +95,18 @@ def turns(client_socket, client_guess_board, opponent_board, opponent_guess_boar
 
     for clients_socket in clients:
         clients_socket.send(message)
+
+    # If the client won, send each other's ship placements
+    if win_check(opponent_board, client_guess_board):
+        # Send to client socket
+        message = pickle.dumps(opponent_board)
+        message = f"{len(message):<{HEADERSIZE}}".encode("utf-8") + message
+        client_socket.send(message)
+
+        # Send to opponent client socket
+        message = pickle.dumps(client_board)
+        message = f"{len(message):<{HEADERSIZE}}".encode("utf-8") + message
+        opponent_client_socket.send(message)
 
     return client_guess_board
 
@@ -133,8 +146,10 @@ if __name__ == "__main__":
     while True:
         if turn == "client1":
             turn = "client2"
-            client1_guess_board = turns(client1_socket, client1_guess_board, client2_board, client2_guess_board)
+            client1_guess_board = turns(client1_socket, client1_guess_board, client2_board,
+                                        client2_guess_board, client2_socket, client1_board)
 
         elif turn == "client2":
             turn = "client1"
-            client2_guess_board = turns(client2_socket, client2_guess_board, client1_board, client1_guess_board)
+            client2_guess_board = turns(client2_socket, client2_guess_board, client1_board,
+                                        client1_guess_board, client1_socket, client2_board)
