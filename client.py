@@ -2,6 +2,10 @@ import socket
 import pickle
 import time
 import copy
+import colorama
+from colorama import Fore
+
+colorama.init(autoreset=True)
 
 HEADERSIZE = 10
 
@@ -34,7 +38,15 @@ def print_board(current_board):  # Prints the board.
 
         # Print board content
         for x in range(len(board)):
-            print(current_board[f][x], end="  ")
+            if str(current_board[f][x]) == "x":
+                print(Fore.RED + str(current_board[f][x]), end="  ")
+
+            elif str(current_board[f][x]) == "o":
+                print(str(current_board[f][x]), end="  ")
+
+            else:
+                print(Fore.BLUE + str(current_board[f][x]), end="  ")
+
         print("\n"*0)
 
 
@@ -67,7 +79,6 @@ if __name__ == "__main__":
                     move = move.split(",")
                     move_x = int(move[0].replace(" ", "")) - 1
                     move_y = int(move[1].replace(" ", "")) - 1
-                    print(f"X: {move_x} Y: {move_y}")
 
                     # Some error checks
                     if move_x < 0:
@@ -141,12 +152,15 @@ if __name__ == "__main__":
                 try:
                     # Print the player's guesses and ask for another guess
                     print("\n")
+                    print("Your ship board:")
+                    print_board(board)
+                    print()
                     print("Opponent's guess board:")
                     print_board(opponent_board)
-                    print("\n"*0)
+                    print()
                     print("Your guess board:")
                     print_board(guess_board)
-                    print("\n"*0)
+                    print()
                     move = input("Enter a guess (x, y): ")
                     move = move.split(",")
                     move_x = int(move[0].replace(" ", "")) - 1
@@ -168,7 +182,7 @@ if __name__ == "__main__":
             # Recieve the result of the move
             result = recieve(pickled=False)
             if result == "hit":
-                guess_board[move_y][move_x] = "X"
+                guess_board[move_y][move_x] = "x"
 
             else:
                 guess_board[move_y][move_x] = "o"
