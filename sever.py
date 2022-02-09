@@ -63,17 +63,18 @@ def win_check(current_board, guess_board):  # Check if the client won
     return True
 
 
-def turns(client_socket, client_guess_board, opponent_board):
+def turns(client_socket, client_guess_board, opponent_board, opponent_guess_board):
     # Notify the client it is their turn
-    message = "your turn".encode("utf-8")
+    message = opponent_guess_board
+    message = pickle.dumps(message)
     message = f"{len(message):<{HEADERSIZE}}".encode("utf-8") + message
     client_socket.send(message)
 
     # Recieve the client's move
     move = recieve(pickled=True, client_socket=client_socket)
 
-    client_move_x = int(move[0][0]) - 1
-    client_move_y = int(move[1][-1]) - 1
+    client_move_x = int(move[0].replace(" ", "")) - 1
+    client_move_y = int(move[1].replace(" ", "")) - 1
 
     # Check if the cient's move is a hit and send the result back
     hit = check_hit(client_move_x, client_move_y, opponent_board)
@@ -130,8 +131,8 @@ if __name__ == "__main__":
     while True:
         if turn == "client1":
             turn = "client2"
-            client1_guess_board = turns(client1_socket, client1_guess_board, client2_board)
+            client1_guess_board = turns(client1_socket, client1_guess_board, client2_board, client2_guess_board)
 
         elif turn == "client2":
             turn = "client1"
-            client2_guess_board = turns(client2_socket, client2_guess_board, client1_board)
+            client2_guess_board = turns(client2_socket, client2_guess_board, client1_board, client1_guess_board)
