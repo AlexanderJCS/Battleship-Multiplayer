@@ -21,7 +21,6 @@ server_socket.listen(2)
 clients = []
 
 turn = "client1"
-startturn = "client1"
 
 
 def recieve(client_socket, pickled):  # Recieve a message
@@ -121,35 +120,50 @@ if __name__ == "__main__":
     while len(clients) < 2:
         time.sleep(1)
 
-    # Notify clients to start the game
-
-    msg = "game start".encode("utf-8")
-    msg = f"{len(msg):<{HEADERSIZE}}".encode("utf-8") + msg
-
-    for client in clients:
-        client.send(msg)
-
-    # Recieve the player's battleship placements
-
-    client1_socket = clients[0]
-    client2_socket = clients[1]
-
-    client1_board = recieve(client1_socket, True)
-    client2_board = recieve(client2_socket, True)
-
-    # Send to client 1 if they won (the client is expecting this information)
-    won = pickle.dumps(win_check(client1_board, client1_guess_board))
-    msg = f"{len(won):<{HEADERSIZE}}".encode("utf-8") + won
-    client1_socket.send(msg)
-
-    # Main game loop
     while True:
-        if turn == "client1":
-            turn = "client2"
-            client1_guess_board = turns(client1_socket, client1_guess_board, client2_board,
-                                        client2_guess_board, client2_socket, client1_board)
+        # Notify clients to start the game
 
-        elif turn == "client2":
-            turn = "client1"
-            client2_guess_board = turns(client2_socket, client2_guess_board, client1_board,
-                                        client1_guess_board, client1_socket, client2_board)
+        msg = "game start".encode("utf-8")
+        msg = f"{len(msg):<{HEADERSIZE}}".encode("utf-8") + msg
+
+        for client in clients:
+            client.send(msg)
+
+        # Recieve the player's battleship placements
+
+        client1_socket = clients[0]
+        client2_socket = clients[1]
+
+        client1_board = recieve(client1_socket, True)
+        client2_board = recieve(client2_socket, True)
+
+        # Send to client 1 if they won (the client is expecting this information)
+        won = pickle.dumps(win_check(client1_board, client1_guess_board))
+        msg = f"{len(won):<{HEADERSIZE}}".encode("utf-8") + won
+        client1_socket.send(msg)
+
+        # Main game loop
+        while True:
+            if turn == "client1":
+                turn = "client2"
+                client1_guess_board = turns(client1_socket, client1_guess_board, client2_board,
+                                            client2_guess_board, client2_socket, client1_board)
+
+                if win_check(client2_board, client1_guess_board):
+                    turn = "client1"
+                    client1_guess_board = [[empty for _ in range(10)] for _ in range(10)]
+                    client2_guess_board = [[empty for _ in range(10)] for _ in range(10)]
+                    time.sleep(10)
+                    break
+
+            elif turn == "client2":
+                turn = "client1"
+                client2_guess_board = turns(client2_socket, client2_guess_board, client1_board,
+                                            client1_guess_board, client1_socket, client2_board)
+
+                if win_check(client1_board, client2_guess_board):
+                    client1_guess_board = [[empty for _ in range(10)] for _ in range(10)]
+                    client2_guess_board = [[empty for _ in range(10)] for _ in range(10)]
+                    time.sleep(10)
+                    break
+        continue
