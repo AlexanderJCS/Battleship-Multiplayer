@@ -7,6 +7,10 @@ from colorama import Fore, Back
 colorama.init(autoreset=True)
 
 HEADERSIZE = 10
+wins = 0
+losses = 0
+moves = 0
+hits = 0
 
 IP = input("IP: ")
 PORT = int(input("Port: "))
@@ -88,7 +92,7 @@ if __name__ == "__main__":
         if start == "game start":
 
             # Let the user place ships
-            ship_lens = [5, 4, 3, 3, 2]
+            ship_lens = [2]
             for ship_len in ship_lens:
                 while True:
                     try:
@@ -161,12 +165,26 @@ if __name__ == "__main__":
             while True:
                 won = recieve(pickled=True)
                 if won:
+                    # Print Boards
                     opponent_board = recieve(pickled=True)
                     print("\nOpponent's board:")
                     print_board(opponent_board)
                     print("You lose.\n")
+
+                    # Reset variables
                     board = [[empty for _ in range(10)] for _ in range(10)]
                     guess_board = [[empty for _ in range(10)] for _ in range(10)]
+                    losses += 1
+
+                    # Show stats
+                    print(f"Wins: {wins} Losses: {losses}")
+                    if losses > 0:
+                        print(f"Win/Loss Ratio: {wins / losses}")
+                    print(f"Moves: {moves} Hits: {hits}")
+                    if hits > 0:
+                        print(f"Move/Hit Ratio: {moves / hits}")
+                    moves = 0
+                    hits = 0
                     break
 
                 opponent_board = recieve(pickled=True)
@@ -174,6 +192,7 @@ if __name__ == "__main__":
 
                 while True:
                     try:
+                        moves += 1
                         # Print the player's guesses and ask for a guess
                         print("\n")
                         merged_board = merge_board(ship_board=board, player_guess_board=opponent_board)
@@ -205,6 +224,7 @@ if __name__ == "__main__":
                 result = recieve(pickled=False)
                 if result == "hit":
                     guess_board[move_y][move_x] = "x"
+                    hits += 1
 
                 else:
                     guess_board[move_y][move_x] = "o"
@@ -214,12 +234,27 @@ if __name__ == "__main__":
                 # Recieve if you won
                 won = recieve(pickled=True)
                 if won:
+                    # Print boards
                     opponent_board = recieve(pickled=True)
                     print("\nOpponent's board:")
                     print_board(opponent_board)
                     print("You won!\n")
+
+                    # Reset variables
                     board = [[empty for _ in range(10)] for _ in range(10)]
                     guess_board = [[empty for _ in range(10)] for _ in range(10)]
+                    wins += 1
+
+                    # Show stats
+                    print(f"Wins: {wins} Losses: {losses}")
+                    if losses > 0:
+                        print(f"Win/Loss Ratio: {wins/losses}")
+                    print(f"Moves: {moves} Hits: {hits}")
+                    if hits > 0:
+                        print(f"Move/Hit Ratio: {moves/hits}")
+
+                    moves = 0
+                    hits = 0
                     break
 
                 # Wait for the opponent to execute their turn
