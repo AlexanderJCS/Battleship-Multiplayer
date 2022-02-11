@@ -8,7 +8,7 @@ TO RUN A SERVER:
 3. Run server.py.
 
 TO CONNECT TO A SERVER:
-1. Download client.py (if you have Python) or client.exe (if you don't have Python) and run it.
+1. Download client.py (if you have Python) or the client_exe zip file if you don't have it. If you downloaded client_exe.zip, extract and run client_console.exe.
 2. If the host is port forwarding, connect to their public IP address. If you are connecting via LAN, input the host's local IP address.
 3. Enter the port. This is the PORT constant in server.py (default is 1234).
 4. Place your ships. Placing ships horizontally starts from the coordinate inputted and generates the ship to the right. Vertical starts at the given coordinate and generates the ship downward.
