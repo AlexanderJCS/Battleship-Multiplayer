@@ -16,6 +16,8 @@ losses = 0
 moves = 0
 hits = 0
 user = ""
+money = 350
+move_x, move_y = 0, 0
 
 empty = "—"
 board = [[empty for _ in range(10)] for _ in range(10)]
@@ -131,6 +133,7 @@ while True:
             break
 
         start = recieve(pickled=False)  # Recieve the game start message
+        cost = dict(recieve(pickled=True))  # Prices of powerups
 
         if start == "game start":
 
@@ -166,7 +169,7 @@ while True:
                             temp_board = copy.deepcopy(board)
                             for i in range(ship_len):
                                 if board[move_y][move_x + i] == "x":
-                                    print("Ship intersects another ship.")
+                                    print(Fore.RED + "Ship intersects another ship.")
                                     error = True
                                     break
                                 temp_board[move_y][move_x + i] = "x"
@@ -178,7 +181,7 @@ while True:
                             temp_board = copy.deepcopy(board)
                             for i in range(ship_len):
                                 if temp_board[move_y + i][move_x] == "x":
-                                    print("Ship intersects another ship.")
+                                    print(Fore.RED + "Ship intersects another ship.")
                                     error = True
                                     break
                                 temp_board[move_y + i][move_x] = "x"
@@ -186,7 +189,7 @@ while True:
                                 error = False
 
                         else:
-                            print("Please input a ship direction of \"horizontal\" or \"vertical\".")
+                            print(Fore.RED + "Please input a ship direction of \"horizontal\" or \"vertical\".")
                             continue
 
                         # If there was an error
@@ -197,10 +200,10 @@ while True:
                         break
 
                     except ValueError:
-                        print("Please input valid formatting: \"x, y\"")
+                        print(Fore.RED + "Please input valid formatting: \"x, y\"")
 
                     except IndexError:
-                        print("Ship exited the board. Please try a different placement.")
+                        print(Fore.RED + "Ship exited the board. Please try a different placement.")
                 if error is False:
                     board = temp_board
                     ship_coords.append(temp_coords)
@@ -227,8 +230,8 @@ while True:
                     break
 
                 opponent_board = recieve(pickled=True)
-                print("Enemy's board recieved.")
 
+                powerup = ""
                 while True:
                     try:
                         moves += 1
@@ -241,21 +244,63 @@ while True:
                         print("Your guess board:")
                         print_board(guess_board)
                         print()
-                        move = input("Enter a guess (x, y): ")
-                        move = move.split(",")
-                        move_x = int(move[0].replace(" ", "")) - 1
-                        move_y = int(move[1].replace(" ", "")) - 1
 
-                        if guess_board[move_y][move_x] != empty:
-                            print("You already guessed that spot!")
+                        if powerup.lower() == "torpedo":
+                            move = input("Input the x coordinate of your torpedo: ")
+                        else:
+                            print(f"Money: ${money}")
+                            move = input("\nEnter a guess (x, y) or type \"shop\" for more options: ")
+
+                        # Shop
+
+                        if move.lower() == "shop":
+                            while True:
+                                print(f"——— SHOP ———\n"
+                                      f"Your money: ${money}\n\n"
+                                      f"Torpedo: ${cost['torpedo']}\n\n"
+                                      f"Type <your powerup> to buy your powerup or \"exit\" to exit shop.")
+                                powerup = input("Your powerup: ")
+
+                                if powerup.lower() == "exit":
+                                    powerup = ""
+                                    break
+
+                                elif cost[powerup.lower()] <= money:
+                                    money -= cost[powerup.lower()]
+                                    print(Fore.GREEN + f"Successfully bought {powerup.lower()}.")
+                                    break
+
+                                else:
+                                    print(Fore.RED + f"You do not have enough money to buy that!\n")
+                                    continue
+
+                        if move == "shop":
+                            continue
+
+                        if powerup.lower() == "torpedo":
+                            move_x = int(move.replace(" ", "")) - 1
+                            move_y = 0
+
+                        elif powerup == "":
+                            move = move.split(",")
+                            move_x = int(move[0].replace(" ", "")) - 1
+                            move_y = int(move[1].replace(" ", "")) - 1
+
+                        if powerup == "" and guess_board[move_y][move_x] != empty:
+                            print(Fore.RED + "You already guessed that spot!")
                             continue
                         break
 
                     except (ValueError, IndexError):
-                        print("Please input valid formatting: \"x, y\"")
+                        print(Fore.RED + "Please input valid formatting: \"x, y\"")
+
+                # Send the powerup to the server
+                msg = pickle.dumps(powerup)
+                msg = bytes(f"{len(msg):<{HEADERSIZE}}", "utf-8") + msg
+                client_socket.send(msg)
 
                 # Send the move to the server
-                move_pickle = pickle.dumps(move)
+                move_pickle = pickle.dumps((move_x, move_y))
                 msg = bytes(f"{len(move_pickle):<{HEADERSIZE}}", "utf-8") + move_pickle
                 client_socket.send(msg)
 
@@ -265,21 +310,26 @@ while True:
                 # Recieve the result of the move
                 result = recieve(pickled=False)
                 if result == "hit":
-                    guess_board[move_y][move_x] = "x"
+                    print(Fore.GREEN + "Hit!")
+                    print(Fore.GREEN + "+$150")
+                    money += 150
                     hits += 1
 
-                else:
-                    guess_board[move_y][move_x] = "o"
-
-                print_board(guess_board)
                 if sunk:
-                    print(f"You sunk your enemy's {sunk}!\n"*3)
+                    print(Fore.GREEN + f"You sunk your enemy's {sunk}!\n"*2)
+                    print(Fore.GREEN + "+$250")
+                    money += 250
 
                 # Recieve if you won
                 won = recieve(pickled=True)
                 if won is True:
                     if_won(True)
                     break
+
+                # Recieve guess board
+
+                guess_board = recieve(pickled=True)
+                print_board(guess_board)
 
                 # Wait for the enemy to execute their turn
                 print("Waiting for enemy...")
