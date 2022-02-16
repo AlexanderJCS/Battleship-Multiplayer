@@ -144,19 +144,18 @@ def turns(client_socket, client_guess_board, opponent_board, opponent_guess_boar
     client_move_y = move[1]
 
     # Use the powerup
-    if powerup.lower() == "torpedo":  # If the powerup is the torpedo
-        if money <= cost["torpedo"]:
-            money -= cost["torpedo"]
+    if powerup.lower() == "torpedo" and money >= cost["torpedo"]:  # If the powerup is the torpedo
+        money -= cost["torpedo"]
 
-            for y in range(len(opponent_board)):
-                if opponent_board[y][client_move_x] == "x" and client_guess_board[y][client_move_x] == empty:
-                    client_guess_board[y][client_move_x] = "x"
+        for y in range(len(opponent_board)):
+            if opponent_board[y][client_move_x] == "x" and client_guess_board[y][client_move_x] == empty:
+                client_guess_board[y][client_move_x] = "x"
 
-                    # Remove coord from ship class
-                    remove_ship(client_ships, (client_move_x, y))
-                    break
-                else:
-                    client_guess_board[y][client_move_x] = "o"
+                # Remove coord from ship class
+                remove_ship(client_ships, (client_move_x, y))
+                break
+            else:
+                client_guess_board[y][client_move_x] = "o"
 
     # Remove coordinate from ship class if powerup is not used
 
