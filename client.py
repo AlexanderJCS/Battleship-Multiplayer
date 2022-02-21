@@ -16,7 +16,6 @@ losses = 0
 moves = 0
 hits = 0
 user = ""
-money = 350
 move_x, move_y = 0, 0
 
 empty = "—"
@@ -131,6 +130,7 @@ while True:
 
         start = recieve(pickled=False)  # Recieve the game start message
         cost = dict(recieve(pickled=True))  # Prices of powerups
+        money = recieve(pickled=True)
 
         if start != "game start":
             print("An unexpected error occured.")
@@ -244,7 +244,7 @@ while True:
                     if powerup.lower() == "torpedo":
                         move = input("Input the x coordinate of your torpedo: ")
                     else:
-                        print(f"Money: ${money}")
+                        print(Fore.GREEN + f"Money: ${money}")
                         move = input("\nEnter a guess (x, y) or type \"shop\" for more options: ")
 
                     # Shop
@@ -264,7 +264,6 @@ while True:
                                     break
 
                                 elif cost[powerup.lower()] <= money:
-                                    money -= cost[powerup.lower()]
                                     print(Fore.GREEN + f"Successfully bought {powerup.lower()}.")
                                     break
 
@@ -322,7 +321,6 @@ while True:
 
             # Recieve money
             money = recieve(pickled=True)
-            print(Fore.GREEN + f"${money}")
 
             # Recieve if you won
             won = recieve(pickled=True)
