@@ -144,7 +144,7 @@ def turns(client_socket, client_guess_board, opponent_board, opponent_guess_boar
     client_move_y = move[1]
 
     # Update the board
-    client_ships, client_guess_board, client_money = update_board(powerup, money, opponent_board, client_guess_board,
+    client_ships, client_guess_board, money = update_board(powerup, money, opponent_board, client_guess_board,
                                                                   (client_move_x, client_move_y), client_ships)
     # Check if player sunk a ship
 
@@ -225,6 +225,7 @@ def update_board(powerup, money, opponent_board, client_guess_board, client_move
 
     elif powerup.lower() == "bomb" and money >= cost["bomb"]:
         money -= cost["bomb"]
+        print(money)
         # Iterate through the y direction
         for y in range(client_move[1] - 1, client_move[1] + 2):
             if opponent_board[y][client_move[0]] == "x":
@@ -266,6 +267,10 @@ if __name__ == "__main__":
         # Send prices
         for client in clients:
             send(client_socket=client, pickled=True, message=cost)
+
+        # Send money
+        send(clients[0], client1.money, True)
+        send(clients[1], client2.money, True)
 
         # Recieve the player's battleship placements
 
