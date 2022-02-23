@@ -5,7 +5,7 @@ import threading
 from dataclasses import dataclass, field
 
 empty = "—"
-cost = {"torpedo": 900, "bomb": 600}
+COST = {"torpedo": 1000, "bomb": 750}
 
 HEADERSIZE = 10
 
@@ -27,19 +27,20 @@ turn = "client1"
 
 @dataclass
 class Client:
-    """ Client 1 class """
+    """ Client class """
     money: int
     guess_board: list
-    board: list
+    board: list = None
+    client_socket: socket.socket = None
 
 
-client1 = Client(money=350, guess_board=[[empty for _ in range(10)] for _ in range(10)], board=[])
-client2 = Client(money=350, guess_board=[[empty for _ in range(10)] for _ in range(10)], board=[])
+client1 = Client(money=350, guess_board=[[empty for _ in range(10)] for _ in range(10)])
+client2 = Client(money=350, guess_board=[[empty for _ in range(10)] for _ in range(10)])
 
 
 @dataclass
-class Client1Ship:
-    """ Client 1 ship class """
+class Ship:
+    """ Client ship class """
     name: str
     length: int
     sunk: False
@@ -47,30 +48,94 @@ class Client1Ship:
 
 
 client1ships = [
-    Client1Ship(name="Aircraft Carrier", length=5, sunk=False),
-    Client1Ship(name="Battleship", length=4, sunk=False),
-    Client1Ship(name="Submarine", length=3, sunk=False),
-    Client1Ship(name="Cruiser", length=3, sunk=False),
-    Client1Ship(name="Destroyer", length=2, sunk=False)
+    Ship(name="Aircraft Carrier", length=5, sunk=False),
+    Ship(name="Battleship", length=4, sunk=False),
+    Ship(name="Submarine", length=3, sunk=False),
+    Ship(name="Cruiser", length=3, sunk=False),
+    Ship(name="Destroyer", length=2, sunk=False)
 ]
-
-
-@dataclass
-class Client2Ship:
-    """ Client 1 ship class """
-    name: str
-    length: int
-    sunk: False
-    coords: list[tuple] = field(default_factory=list)
-
 
 client2ships = [
-    Client2Ship(name="Aircraft Carrier", length=5, sunk=False),
-    Client2Ship(name="Battleship", length=4, sunk=False),
-    Client2Ship(name="Submarine", length=3, sunk=False),
-    Client2Ship(name="Cruiser", length=3, sunk=False),
-    Client2Ship(name="Destroyer", length=2, sunk=False)
+    Ship(name="Aircraft Carrier", length=5, sunk=False),
+    Ship(name="Battleship", length=4, sunk=False),
+    Ship(name="Submarine", length=3, sunk=False),
+    Ship(name="Cruiser", length=3, sunk=False),
+    Ship(name="Destroyer", length=2, sunk=False)
 ]
+
+
+class Powerup:
+    def __init__(self, powerup, client_class, opponent, client_move, client_ships):
+        self.powerup = powerup
+        self.client_class = client_class
+        self.opponent = opponent
+        self.client_move = client_move
+        self.client_ships = client_ships
+
+    def use_powerup(self):
+        if self.powerup == "torpedo":
+            self.torpedo()
+
+        elif self.powerup == "bomb":
+            self.bomb()
+
+    def torpedo(self):
+        self.client_class.money -= COST[self.powerup]
+
+        for y in range(len(self.opponent.board)):
+            # If it is a hit
+
+            condition1 = self.opponent.board[y][self.client_move[0]] == "x"
+            condition2 = self.client_class.guess_board[y][self.client_move[0]] == empty
+
+            if condition1 and condition2:
+                self.client_class.guess_board, self.client_ships, self.client_class.money = make_hit(self.client_class, (self.client_move[0], y), self.client_ships)
+                break
+
+            # Else, mark as a miss
+            elif not condition1 and condition2:
+                self.client_class.guess_board[y][self.client_move[0]] = "o"
+
+        return self.client_ships, self.client_class.guess_board, self.client_class.money
+
+    def bomb(self):
+        self.client_class.money -= COST[self.powerup]
+
+        # Iterate through the y direction
+        for y in range(self.client_move[1] - 1, self.client_move[1] + 2):
+            condition1 = self.opponent.board[y][self.client_move[0]] == "x"
+            condition2 = self.client_class.guess_board[y][self.client_move[0]]
+
+            if y >= len(self.client_class.guess_board):
+                break
+
+            # If it is a hit
+            elif condition1 and condition2:
+                self.client_class.guess_board, self.client_ships, self.client_class.money = make_hit(self.client_class, (self.client_move[0], y), self.client_ships)
+
+            elif not condition1 and condition2:
+                self.client_class.guess_board[y][self.client_move[0]] = "o"
+
+        # Iterate through the x direction
+        for x in range(self.client_move[0] - 1, self.client_move[0] + 2):
+            condition1 = self.opponent.board[self.client_move[1]][x] == "x"
+            condition2 = self.client_class.guess_board[self.client_move[1]][x] == empty
+
+            if x >= len(self.client_class.guess_board):
+                break
+
+            # If it is a hit
+
+            elif condition1 and condition2:
+                self.client_class.guess_board, self.client_ships, self.client_class.money = make_hit(self.client_class, (x, self.client_move[1]), self.client_ships)
+
+            elif not condition1 and condition2:
+                self.client_class.guess_board[self.client_move[1]][x] = "o"
+
+        return self.client_ships, self.client_class.guess_board, self.client_class.money
+
+
+# Functions
 
 
 def recieve(client_socket, pickled):  # Recieve a message
@@ -92,6 +157,7 @@ def recieve(client_socket, pickled):  # Recieve a message
 
 
 def send(client_socket, message, pickled):
+    print(f"Sent {message} to {client_socket}. Pickled: {pickled}")
     message = pickle.dumps(message) if pickled else message.encode("utf-8")
     message = f"{len(message):<{HEADERSIZE}}".encode("utf-8") + message
 
@@ -129,60 +195,62 @@ def win_check(current_board, guess_board):  # Check if the client won
     return True
 
 
-def turns(client_socket, client_guess_board, opponent_board, opponent_guess_board,
-          opponent_client_socket, client_board, client_ships, money):
+def turns(client_class, opponent, client_ships):
     # Notify the client it is their turn
-    send(client_socket, opponent_guess_board, True)
+    send(client_class.client_socket, opponent.guess_board, True)
 
     # Recieve the client's powerup
-    powerup = recieve(pickled=True, client_socket=client_socket)
+    powerup = recieve(pickled=True, client_socket=client_class.client_socket)
 
     # Recieve the client's move
-    move = recieve(pickled=True, client_socket=client_socket)
-
-    client_move_x = move[0]
-    client_move_y = move[1]
+    move = recieve(pickled=True, client_socket=client_class.client_socket)
 
     # Update the board
-    client_ships, client_guess_board, money = update_board(powerup, money, opponent_board, client_guess_board,
-                                                                  (client_move_x, client_move_y), client_ships)
+    if powerup == "":
+        client_class.guess_board[move[1]][move[0]] = "x" if opponent.board[move[1]][move[0]] == "x" else "o"
+        remove_ship(client_ships, move)
+
+    else:
+        p = Powerup(powerup, client_class, opponent, move, client_ships)
+        p.use_powerup()
+
     # Check if player sunk a ship
 
     result, client_ships = if_sank(client_ships)
-    send(client_socket, result, True)
+    send(client_class.client_socket, result, True)
 
     if result:
-        money += 250
+        client_class.money += 250
 
     # Check if the cient's move is a hit and send the result back
-    hit = check_hit(client_move_x, client_move_y, opponent_board)
+    hit = check_hit(move[0], move[1], opponent.board)
 
-    send(client_socket, hit, False)
+    send(client_class.client_socket, hit, False)
     if hit == "hit" and powerup == "":
-        money += 150
+        client_class.money += 150
 
     # Send money to client
-    send(client_socket, money, True)
+    send(client_class.client_socket, client_class.money, True)
 
     # Return if client won
-    win = win_check(opponent_board, client_guess_board)
+    win = win_check(opponent.board, client_class.guess_board)
 
-    for clients_socket in clients:
-        send(clients_socket, win, True)
-
-    # Send guess board to client
-
-    send(client_socket=client_socket, message=client_guess_board, pickled=True)
+    for client_socket in clients:
+        send(client_socket, win, True)
 
     # If the client won, send each other's ship placements
-    if win_check(opponent_board, client_guess_board):
+    if win:
         # Send to client socket
-        send(client_socket, opponent_board, True)
+        send(client_class.client_socket, opponent.board, True)
 
         # Send to opponent client socket
-        send(opponent_client_socket, client_board, True)
+        send(opponent.client_socket, client_class.board, True)
 
-    return client_guess_board, client_ships, money
+    # Send guess board to client
+    else:
+        send(client_socket=client_class.client_socket, message=client_class.guess_board, pickled=True)
+
+    return client_class.guess_board, client_ships, client_class.money
 
 
 def remove_ship(ships, coords):  # Removes ship from ship class
@@ -201,51 +269,11 @@ def if_sank(ships):  # Checks if the user sank a ship
     return False, ships
 
 
-def update_board(powerup, money, opponent_board, client_guess_board, client_move, client_ships):
-    # If no powerup is used
-    if powerup == "":
-        client_guess_board[client_move[1]][client_move[0]] = "x" if opponent_board[client_move[1]][client_move[0]] \
-                                                                    == "x" else "o"
-        return remove_ship(client_ships, client_move), client_guess_board, money
-
-    # Use the powerup
-    elif powerup.lower() == "torpedo" and money >= cost["torpedo"]:  # If the powerup is the torpedo
-        money -= cost["torpedo"]
-
-        for y in range(len(opponent_board)):
-            # If it is a hit
-            if opponent_board[y][client_move[0]] == "x" and client_guess_board[y][client_move[0]] == empty:
-                client_guess_board[y][client_move[0]] = "x"
-                remove_ship(client_ships, (client_move[0], y))
-                money += 150
-                break
-            # Else, mark as a miss
-            else:
-                client_guess_board[y][client_move[0]] = "o"
-
-    elif powerup.lower() == "bomb" and money >= cost["bomb"]:
-        money -= cost["bomb"]
-        print(money)
-        # Iterate through the y direction
-        for y in range(client_move[1] - 1, client_move[1] + 2):
-            if opponent_board[y][client_move[0]] == "x":
-                client_guess_board[y][client_move[0]] = "x"
-                remove_ship(client_ships, (client_move[0], y))
-                money += 150
-
-            else:
-                client_guess_board[y][client_move[0]] = "o"
-
-        # Iterate through the x direction
-        for x in range(client_move[0] - 1, client_move[0] + 2):
-            if opponent_board[client_move[1]][x] == "x":
-                client_guess_board[client_move[1]][x] = "x"
-                remove_ship(client_ships, (x, client_move[1]))
-
-            else:
-                client_guess_board[client_move[1]][x] = "o"
-
-    return client_ships, client_guess_board, money
+def make_hit(client_class, client_move, client_ships):
+    client_class.guess_board[client_move[1]][client_move[0]] = "x"
+    client_ships = remove_ship(client_ships, (client_move[0], client_move[1]))
+    client_class.money += 150
+    return client_class.guess_board, client_ships, client_class.money
 
 
 if __name__ == "__main__":
@@ -262,11 +290,11 @@ if __name__ == "__main__":
         # Notify clients to start the game
 
         for client in clients:
-            send(client_socket=client, message="game start", pickled=False)
+            send(client_socket=client, message="game start", pickled=True)
 
         # Send prices
         for client in clients:
-            send(client_socket=client, pickled=True, message=cost)
+            send(client_socket=client, pickled=True, message=COST)
 
         # Send money
         send(clients[0], client1.money, True)
@@ -274,13 +302,13 @@ if __name__ == "__main__":
 
         # Recieve the player's battleship placements
 
-        client1_socket = clients[0]
-        client2_socket = clients[1]
+        client1.client_socket = clients[0]
+        client2.client_socket = clients[1]
 
-        client1.board = recieve(client1_socket, True)
-        client2.board = recieve(client2_socket, True)
-        client1_ship_list = recieve(client1_socket, True)
-        client2_ship_list = recieve(client2_socket, True)
+        client1.board = recieve(client1.client_socket, True)
+        client2.board = recieve(client2.client_socket, True)
+        client1_ship_list = recieve(client1.client_socket, True)
+        client2_ship_list = recieve(client2.client_socket, True)
 
         # Input ship coordinates for client 1
         for coordinates in client1_ship_list:
@@ -297,37 +325,33 @@ if __name__ == "__main__":
                     break
 
         # Send to client 1 if they won (the client is expecting this information)
-        send(client1_socket, win_check(client1.board, client1.guess_board), True)
+        send(client1.client_socket, win_check(client1.board, client1.guess_board), True)
 
         # Main game loop
         while True:
             # Handle client 1's turn
             if turn == "client1":
                 turn = "client2"
-                client1.guess_board, client1ships, client1.money = turns(client1_socket, client1.guess_board,
-                                                                         client2.board, client2.guess_board,
-                                                                         client2_socket, client1.board,
-                                                                         client1ships, client1.money)
+                client1.guess_board, client1ships, client1.money = turns(client1, client2, client1ships)
 
                 # If the client won, reset game
                 if win_check(client2.board, client1.guess_board):
                     turn = "client1"
                     client1.guess_board = [[empty for _ in range(10)] for _ in range(10)]
                     client2.guess_board = [[empty for _ in range(10)] for _ in range(10)]
+
                     time.sleep(10)
                     break
 
             elif turn == "client2":
                 # Handle client 2's turn
                 turn = "client1"
-                client2.guess_board, client2ships, client2.money = turns(client2_socket, client2.guess_board,
-                                                                         client1.board, client1.guess_board,
-                                                                         client1_socket, client2.board,
-                                                                         client2ships, client2.money)
+                client2.guess_board, client2ships, client2.money = turns(client2, client1, client2ships)
 
                 # If the client won, reset game
                 if win_check(client1.board, client2.guess_board):
                     client1.guess_board = [[empty for _ in range(10)] for _ in range(10)]
                     client2.guess_board = [[empty for _ in range(10)] for _ in range(10)]
+
                     time.sleep(10)
                     break
