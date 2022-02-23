@@ -21,7 +21,16 @@ move_x, move_y = 0, 0
 empty = "—"
 board = [[empty for _ in range(10)] for _ in range(10)]
 guess_board = [[empty for _ in range(10)] for _ in range(10)]
-error = False
+
+# Connect to server
+
+IP = input("IP: ")
+PORT = int(input("Port: "))
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect((IP, PORT))
+
+print("Waiting for game to start...")
 
 
 # Functions
@@ -110,27 +119,20 @@ def if_won(user_won):
     moves = 0
     hits = 0
 
-    user = input("Do you want to exit? (y/n) ")
+    user = input("Do you want to play again? (y/n) ")
+    return user
 
 
 while True:
+    if user == "n":  # If the user exited the script, break from all loops
+        break
+
     try:
-        # Connect to server
+        start = recieve(pickled=True)  # Recieve the game start message
 
-        IP = input("IP: ")
-        PORT = int(input("Port: "))
-
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((IP, PORT))
-
-        print("Waiting for game to start...")
-
-        if user == "y":  # If the user exited the script, break from all loops
-            break
-
-        start = recieve(pickled=False)  # Recieve the game start message
+        print(start)
         cost = dict(recieve(pickled=True))  # Prices of powerups
-        money = recieve(pickled=True)
+        money = recieve(pickled=True)  # Recieve money
 
         if start != "game start":
             print("An unexpected error occured.")
@@ -141,6 +143,8 @@ while True:
         ship_coords = []
         temp_coords = []
         temp_board = copy.deepcopy(board)
+        error = False
+
         for ship_len in ship_lens:
             while True:
                 try:
@@ -193,7 +197,6 @@ while True:
 
                     # If there was an error
                     if error:
-                        error = False
                         continue
 
                     break
@@ -225,7 +228,7 @@ while True:
         while True:
             won = recieve(pickled=True)
             if won is True:
-                if_won(False)
+                user = if_won(False)
                 break
 
             opponent_board = recieve(pickled=True)
@@ -257,7 +260,7 @@ while True:
 
                                 for item in cost:
                                     print(f"{item.capitalize()}: ${cost[item]}")
-                                powerup = input("Your powerup: ")
+                                powerup = input("Your powerup or type \"exit\" to exit: ")
 
                                 if powerup.lower() == "exit":
                                     powerup = ""
@@ -325,7 +328,7 @@ while True:
             # Recieve if you won
             won = recieve(pickled=True)
             if won is True:
-                if_won(True)
+                user = if_won(True)
                 break
 
             # Recieve guess board
