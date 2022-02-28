@@ -12,14 +12,10 @@ colorama.init(autoreset=True)
 # Define vars
 
 HEADERSIZE = 10
-wins = 0
-losses = 0
-moves = 0
-hits = 0
 user = ""
 move_x, move_y = 0, 0
 
-empty = "—"
+EMPTY = "—"
 
 # Connect to server
 
@@ -32,15 +28,31 @@ client_socket.connect((IP, PORT))
 # Classes
 
 
+class Statistics:
+    """ Stats class"""
+    def __init__(self):
+        self.wins = 0
+        self.losses = 0
+        self.moves = 0
+        self.hits = 0
+
+    def reset(self):
+        self.moves = 0
+        self.hits = 0
+
+
 @dataclass
 class Client:
     """ Client class """
     money: int
     guess_board: list
     board: list
+    stats: Statistics
 
 
-client = Client(0, [[empty for _ in range(10)] for _ in range(10)], [[empty for _ in range(10)] for _ in range(10)])
+stats = Statistics()
+client = Client(0, [[EMPTY for _ in range(10)] for _ in range(10)], [[EMPTY for _ in range(10)] for _ in range(10)],
+                stats)
 
 
 # Functions
@@ -53,7 +65,7 @@ def send(socket_client, message, pickled):
 
 
 def merge_board(ship_board, player_guess_board):
-    output_board = [[empty for _ in range(10)] for _ in range(10)]
+    output_board = [[EMPTY for _ in range(10)] for _ in range(10)]
     for f in range(len(ship_board)):
         for x in range(len(ship_board)):
             # If guess_board has a hit, make it a capital X
@@ -85,14 +97,13 @@ def print_board(current_board):  # Prints the board.
             elif str(current_board[f][x]) == "X":
                 color = Back.RED
 
-            elif str(current_board[f][x]) == empty:
+            elif str(current_board[f][x]) == EMPTY:
                 color = Fore.BLUE
 
             else:
                 color = ""
 
             print(f"{color}{current_board[f][x]}", end="  ")
-
         print()
 
 
@@ -108,31 +119,30 @@ def recieve(pickled):  # Recieve a message
 
 
 def if_won(user_won):
-    global client, losses, hits, moves, user, wins
+    global client, user
     opponent_board = recieve(pickled=True)
     print("\nEnemy's board:")
     print_board(opponent_board)
 
     if user_won:
         print("You win!\n"*3)
-        wins += 1
+        client.stats.wins += 1
     else:
         print("You lose.\n"*3)
-        losses += 1
+        client.stats.losses += 1
 
     # Reset variables
-    client.board = [[empty for _ in range(10)] for _ in range(10)]
-    client.guess_board = [[empty for _ in range(10)] for _ in range(10)]
+    client.board = [[EMPTY for _ in range(10)] for _ in range(10)]
+    client.guess_board = [[EMPTY for _ in range(10)] for _ in range(10)]
 
     # Show stats
-    print(f"Wins: {wins} Losses: {losses}")
-    if losses > 0:
-        print(f"Win/Loss Ratio: {round(wins / losses, 2)}")
-    print(f"Moves: {moves} Hits: {hits}")
-    if hits > 0:
-        print(f"Miss/Hit Ratio: {round((moves-hits) / hits, 2)}")
-    moves = 0
-    hits = 0
+    print(f"Wins: {client.stats.wins} Losses: {client.stats.losses}")
+    if client.stats.losses > 0:
+        print(f"Win/Loss Ratio: {round(client.stats.wins / client.stats.losses, 2)}")
+    print(f"Moves: {client.stats.moves} Hits: {client.stats.hits}")
+    if client.stats.hits > 0:
+        print(f"Miss/Hit Ratio: {round((client.stats.moves-client.stats.hits) / client.stats.hits, 2)}")
+    client.stats.reset()
 
     user = input("Do you want to play again? (y/n) ")
     send(client_socket, user, False)  # Send if the client is playing again to the server
@@ -279,7 +289,7 @@ while True:
                 break
 
             opponent_guess_board = recieve(pickled=True)
-            moves += 1
+            client.stats.moves += 1
 
             powerup = ""
             while True:
@@ -306,7 +316,7 @@ while True:
                         move_x = int(move[0].replace(" ", "")) - 1
                         move_y = int(move[1].replace(" ", "")) - 1
 
-                    elif powerup == "" and client.guess_board[move_y][move_x] != empty:
+                    elif powerup == "" and client.guess_board[move_y][move_x] != EMPTY:
                         print(f"{Fore.RED}You already guessed that spot!")
                         continue
                     break
@@ -328,7 +338,7 @@ while True:
             result = recieve(pickled=False)
             if result == "hit":
                 print(f"{Fore.GREEN}Hit!")
-                hits += 1
+                client.stats.hits += 1
 
             if sunk:
                 print(f"{Fore.GREEN}You sunk your enemy's {sunk}!\n"*2)
