@@ -178,13 +178,24 @@ def shop(balance, prices):  # Shop code
             print(f"{Fore.RED}Please input a valid powerup. Type \"exit\" to exit.")
 
     # Get the coordinates of the powerup
-    if client_powerup == "torpedo":
-        client_move = input("Input the x coordinate of your torpedo: ")
-        return client_move, client_powerup
+    while True:
+        try:
+            if client_powerup == "torpedo":
+                client_move = int(input("Input the x coordinate of your torpedo: "))
+                client_move = [client_move, 1]
 
-    elif client_powerup == "bomb":
-        client_move = input("Input coordiantes of your bomb: ")
-        return client_move, client_powerup
+                if client_move[0] > 10:
+                    print(f"{Fore.RED}Coordinate is out of the board!")
+                    continue
+
+                return client_move, client_powerup
+
+            elif client_powerup == "bomb":
+                client_move = input("Input coordiantes of your bomb: ")
+                return client_move, client_powerup
+            break
+        except ValueError:
+            print(f"{Fore.RED}Please input a valid x coordinate.")
 
     return None, ""
 
@@ -315,6 +326,10 @@ while True:
                         move = move.split(",")
                         move_x = int(move[0].replace(" ", "")) - 1
                         move_y = int(move[1].replace(" ", "")) - 1
+
+                    elif powerup == "torpedo":
+                        move_x = int(move[0]) - 1
+                        move_y = int(move[1]) - 1
 
                     elif powerup == "" and client.guess_board[move_y][move_x] != EMPTY:
                         print(f"{Fore.RED}You already guessed that spot!")

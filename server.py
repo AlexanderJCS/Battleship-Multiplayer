@@ -197,7 +197,7 @@ def turns(client_class, opponent):  # Manages the turn of the current player
     powerup = recieve(pickled=False, client_socket=client_class.client_socket)  # Recieve the client's powerup
     move = recieve(pickled=True, client_socket=client_class.client_socket)  # Recieve the client's move
 
-    print(f"Recieved move {move} from {client_class}")
+    print(f"Recieved move {move}")
 
     # Update the board
     hit = check_hit(*move, opponent.board)
