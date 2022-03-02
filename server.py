@@ -193,6 +193,7 @@ def win_check(current_board, guess_board):  # Check if the client won
 
 
 def turns(client_class, opponent):  # Manages the turn of the current player
+    print(f"Opponent guess board: {opponent.guess_board}")
     send(client_class.client_socket, opponent.guess_board, True)  # Notify the client it is their turn
     powerup = recieve(pickled=False, client_socket=client_class.client_socket)  # Recieve the client's powerup
     move = recieve(pickled=True, client_socket=client_class.client_socket)  # Recieve the client's move
