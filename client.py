@@ -69,11 +69,14 @@ def merge_board(ship_board, player_guess_board):
     for f in range(len(ship_board)):
         for x in range(len(ship_board)):
             # If guess_board has a hit, make it a capital X
-            if ship_board[f][x] == "x" and player_guess_board[f][x] == "x":
-                output_board[f][x] = "X"
-
+            if ship_board[f][x] == "x":
+                if player_guess_board[f][x] == "x":
+                    output_board[f][x] = "X"
+                else:
+                    output_board[f][x] = ship_board[f][x]
             else:
-                output_board[f][x] = ship_board[f][x]
+                output_board[f][x] = player_guess_board[f][x]
+
     return output_board
 
 
@@ -228,7 +231,7 @@ while True:
                 try:
                     print_board(client.board)
                     print(f"Ship length: {ship_len}")
-                    direction = input("Enter ship direction (horizontal, vertical): ")
+                    direction = input("Enter ship direction (up, down, left, right): ")
                     move = input("Enter a ship placement (x, y): ")
                     move = move.split(",")
 
@@ -245,7 +248,7 @@ while True:
                     temp_coords = []
 
                     # If the boat direciton is horizontal
-                    if direction == "horizontal" or direction == "h":
+                    if direction == "right" or direction == "r":
                         for i in range(ship_len):
                             if client.board[move_y][move_x + i] == "x":
                                 print(Fore.RED + "Ship intersects another ship.")
@@ -255,7 +258,7 @@ while True:
                             temp_coords.append((move_x + i, move_y))
 
                     # If the boat direction is vertical
-                    elif direction == "vertical" or direction == "v":
+                    elif direction == "down" or direction == "d":
                         for i in range(ship_len):
                             if client.board[move_y + i][move_x] == "x":
                                 print(Fore.RED + "Ship intersects another ship.")
@@ -264,8 +267,26 @@ while True:
                             temp_board[move_y + i][move_x] = "x"
                             temp_coords.append((move_x, move_y + i))
 
+                    elif direction == "left" or direction == "l":
+                        for i in range(ship_len):
+                            if client.board[move_y][move_x - i] == "x":
+                                print(Fore.RED + "Ship intersects another ship.")
+                                error = True
+                                break
+                            temp_board[move_y][move_x - i] = "x"
+                            temp_coords.append((move_x - i, move_y))
+
+                    elif direction == "up" or direction == "u":
+                        for i in range(ship_len):
+                            if client.board[move_y - i][move_x] == "x":
+                                print(Fore.RED + "Ship intersects another ship.")
+                                error = True
+                                break
+                            temp_board[move_y - i][move_x] = "x"
+                            temp_coords.append((move_x, move_y - i))
+
                     else:
-                        print(f"{Fore.RED}Please input a ship direction of \"horizontal\" or \"vertical\".")
+                        print(f"{Fore.RED}Please input a ship direction of \"up\", \"down\", \"left\", or \"right\".")
                         continue
 
                     # If there was an error
