@@ -2,10 +2,15 @@ import socket
 import pickle
 import time
 import threading
+import random
 from dataclasses import dataclass, field
 
 empty = "—"
-COST = {"torpedo": 900, "bomb": 600}
+POWERUPS = {
+    "torpedo": [1000, 'Sends a torpedo through a column until it hits a ship'],
+    "bomb": [750, 'Creates a "+"-shape area of destruction'],
+    "recon plane": [1500, '50% - 75% chance a reconnaissance plane finds and fires a missile at enemy ships.']
+}
 
 HEADERSIZE = 10
 
@@ -75,14 +80,28 @@ class Powerup:
         self.client_ships = client_class.ships
 
     def use_powerup(self):
-        if self.powerup == "torpedo" and self.client_class.money >= COST.get(self.powerup):
+        if self.powerup == "torpedo" and self.client_class.money >= POWERUPS.get(self.powerup)[0]:
             self.torpedo()
 
-        elif self.powerup == "bomb" and self.client_class.money >= COST.get(self.powerup):
+        elif self.powerup == "bomb" and self.client_class.money >= POWERUPS.get(self.powerup)[0]:
             self.bomb()
 
-    def torpedo(self):
-        self.client_class.money -= COST.get(self.powerup)
+        elif self.powerup == "recon plane":
+            self.recon_plane()
+
+    def recon_plane(self):
+        # If aircraft carrier is alive, 75% chance to find a ship, else 50% chance
+        # Lore is that aircraft carrier is closer to the battlefield and therefore has more fuel to look for ships
+        if random.random() < (.5 if self.client_class.ships[0].sunk else .75):
+            ran_ship = random.choice(self.client_class.ships)
+            ran_coord = random.choice(ran_ship.coords)
+            self.client_class.guess_board, self.client_class.ships, self.client_class.money = \
+                make_hit(self.client_class, ran_coord)
+
+        return self.client_ships, self.client_class.guess_board, self.client_class.money
+
+    def torpedo(self):  # Torpedo powerup: iterates through an entire column until it hits a ship
+        self.client_class.money -= POWERUPS.get(self.powerup)[0]
 
         for y in range(len(self.opponent.board)):
             # If it is a hit
@@ -101,8 +120,8 @@ class Powerup:
 
         return self.client_ships, self.client_class.guess_board, self.client_class.money
 
-    def bomb(self):
-        self.client_class.money -= COST.get(self.powerup)
+    def bomb(self):  # Makes a "+"-shaped area of destruction.
+        self.client_class.money -= POWERUPS.get(self.powerup)[0]
 
         # Iterate through the y direction
         for y in range(self.client_move[1] - 1, self.client_move[1] + 2):
@@ -157,13 +176,7 @@ def recieve(client_socket, pickled):  # Recieve a message
 def send(client_socket, message, pickled):
     message = pickle.dumps(message) if pickled else message.encode("utf-8")
     message = f"{len(message):<{HEADERSIZE}}".encode("utf-8") + message
-
-    try:
-        client_socket.send(message)
-
-    except ConnectionResetError:
-        clients.remove(client_socket)
-        print("Client disconnected.")
+    client_socket.send(message)
 
 
 def manage_clients():  # Handle clients connecting and disconnecting
@@ -193,7 +206,6 @@ def win_check(current_board, guess_board):  # Check if the client won
 
 
 def turns(client_class, opponent):  # Manages the turn of the current player
-    print(f"Opponent guess board: {opponent.guess_board}")
     send(client_class.client_socket, opponent.guess_board, True)  # Notify the client it is their turn
     powerup = recieve(pickled=False, client_socket=client_class.client_socket)  # Recieve the client's powerup
     move = recieve(pickled=True, client_socket=client_class.client_socket)  # Recieve the client's move
@@ -201,12 +213,14 @@ def turns(client_class, opponent):  # Manages the turn of the current player
     print(f"Recieved move {move}")
 
     # Update the board
-    hit = check_hit(*move, opponent.board)
+    hit = "miss"
     if powerup == "":
+        hit = check_hit(*move, opponent.board)
         client_class.guess_board[move[1]][move[0]] = "x" if hit == "hit" else "o"
         remove_ship(client_class.ships, move)
 
     else:
+        print(f"Recieved powerup {powerup}")
         Powerup(powerup, client_class, opponent, move).use_powerup()
 
     # Check if player sunk a ship
@@ -313,7 +327,7 @@ if __name__ == "__main__":
 
             # Send prices
             for client in clients:
-                send(client_socket=client, pickled=True, message=COST)
+                send(client_socket=client, pickled=True, message=POWERUPS)
 
             # Send money
             send(clients[0], client1.money, True)

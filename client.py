@@ -50,9 +50,81 @@ class Client:
     stats: Statistics
 
 
-stats = Statistics()
-client = Client(0, [[EMPTY for _ in range(10)] for _ in range(10)], [[EMPTY for _ in range(10)] for _ in range(10)],
-                stats)
+class Shop:
+    def __init__(self, balance, prices):
+        self.balance = balance
+        self.prices = prices
+        self.client_powerup = ""
+
+    def run_shop(self):
+        self.print_shop()
+        self.get_user_powerup()
+        while True:
+            client_move, self.client_powerup, coord_error = self.get_powerup_coords()
+            if coord_error is False:
+                break
+
+        return client_move, self.client_powerup
+
+    def print_shop(self):
+        # Print the items available in the shop
+        print(f"——— SHOP ———\n"
+              f"Your money: ${self.balance}\n\n")
+
+        for item in self.prices:
+            print(f"{item.capitalize()}: ${self.prices.get(item)[0]}:    {self.prices.get(item)[1]}")
+
+    def get_user_powerup(self):
+        while True:
+            try:
+                self.client_powerup = input("Your powerup or type \"exit\" to exit: ")
+                self.client_powerup = self.client_powerup.lower()
+
+                # If the client exited
+                if self.client_powerup == "exit":
+                    self.client_powerup = ""
+                    break
+
+                # Check if the client has enough money to buy the powerup
+                elif self.prices.get(self.client_powerup)[0] <= self.balance:
+                    print(f"{Fore.GREEN}Successfully bought {self.client_powerup}.")
+
+                else:
+                    print(f"{Fore.RED}You do not have enough money to buy that!\n")
+                    continue
+                break
+
+            except TypeError:
+                print(f"{Fore.RED}Please input a valid powerup. Type \"exit\" to exit.")
+
+    def get_powerup_coords(self):
+        try:
+            if self.client_powerup == "torpedo":
+                client_move = int(input("Input the x coordinate of your powerup: "))
+                client_move = f"{client_move}, 1"
+
+            elif self.client_powerup == "bomb":
+                client_move = input("Input coordiantes of your powerup: ")
+
+            elif self.client_powerup == "recon plane":
+                client_move = "1, 1"
+
+            else:
+                return None, "", False
+
+            # Split client_move into 2 vars
+            client_move = client_move.split(",")
+            client_move_x = int(client_move[0].replace(" ", "")) - 1
+            client_move_y = int(client_move[1].replace(" ", "")) - 1
+
+            if client_move_x >= 10 and client_move_y >= 10:
+                print(f"{Fore.RED}Please input valid coordinates!")
+                return client_move, self.client_powerup, True
+            return [client_move_x, client_move_y], self.client_powerup, False
+
+        except (ValueError, TypeError):
+            print(f"{Fore.RED}Please input valid coordinates!")
+            return None, "", True
 
 
 # Functions
@@ -152,56 +224,9 @@ def if_won(user_won):
     return user
 
 
-def shop(balance, prices):  # Shop code
-    while True:
-        try:
-            # Print the items available in the shop
-            print(f"——— SHOP ———\n"
-                  f"Your money: ${balance}\n\n")
-
-            for item in prices:
-                print(f"{item.capitalize()}: ${prices.get(item)}")
-            client_powerup = input("Your powerup or type \"exit\" to exit: ")
-            client_powerup = client_powerup.lower()
-
-            # If the client exited
-            if client_powerup == "exit":
-                client_powerup = ""
-
-            # Check if the client has enough money to buy the powerup
-            elif prices.get(client_powerup) <= balance:
-                print(f"{Fore.GREEN}Successfully bought {client_powerup}.")
-
-            else:
-                print(f"{Fore.RED}You do not have enough money to buy that!\n")
-                continue
-            break
-
-        except (KeyError, TypeError):
-            print(f"{Fore.RED}Please input a valid powerup. Type \"exit\" to exit.")
-
-    # Get the coordinates of the powerup
-    while True:
-        try:
-            if client_powerup == "torpedo":
-                client_move = int(input("Input the x coordinate of your torpedo: "))
-                client_move = [client_move, 1]
-
-                if client_move[0] > 10:
-                    print(f"{Fore.RED}Coordinate is out of the board!")
-                    continue
-
-                return client_move, client_powerup
-
-            elif client_powerup == "bomb":
-                client_move = input("Input coordiantes of your bomb: ")
-                return client_move, client_powerup
-            break
-        except ValueError:
-            print(f"{Fore.RED}Please input a valid x coordinate.")
-
-    return None, ""
-
+stats = Statistics()
+client = Client(0, [[EMPTY for _ in range(10)] for _ in range(10)], [[EMPTY for _ in range(10)] for _ in range(10)],
+                stats)
 
 while True:
     if user == "n":  # If the user exited the script, break from all loops
@@ -212,7 +237,7 @@ while True:
     try:
         start = recieve(pickled=True)  # Recieve the game start message
 
-        COST = dict(recieve(pickled=True))  # Prices of powerups
+        POWERUPS = dict(recieve(pickled=True))  # Prices of powerups
         client.money = recieve(pickled=True)  # Recieve money
 
         if start != "game start":
@@ -286,7 +311,7 @@ while True:
                             temp_coords.append((move_x, move_y - i))
 
                     else:
-                        print(f"{Fore.RED}Please input a ship direction of \"up\", \"down\", \"left\", or \"right\".")
+                        print(f"{Fore.RED}Input a ship direction of \"up\", \"down\", \"left\", or \"right\".")
                         continue
 
                     # If there was an error
@@ -299,7 +324,7 @@ while True:
                     break
 
                 except ValueError:
-                    print(f"{Fore.RED}Please input valid formatting: \"x, y\"")
+                    print(f"{Fore.RED}Input valid formatting: \"x, y\"")
 
                 except IndexError:
                     print(f"{Fore.RED}Ship exited the board. Please try a different placement.")
@@ -338,33 +363,31 @@ while True:
 
                     # Shop
                     if move.lower() == "shop":
-                        move, powerup = shop(client.money, COST)
+                        s = Shop(client.money, POWERUPS)
+                        move, powerup = s.run_shop()
 
                     if not move:
                         continue
 
-                    if powerup != "torpedo":
+                    if powerup == "":
                         move = move.split(",")
                         move_x = int(move[0].replace(" ", "")) - 1
                         move_y = int(move[1].replace(" ", "")) - 1
 
-                    elif powerup == "torpedo":
-                        move_x = int(move[0]) - 1
-                        move_y = int(move[1]) - 1
-
-                    elif powerup == "" and client.guess_board[move_y][move_x] != EMPTY:
-                        print(f"{Fore.RED}You already guessed that spot!")
-                        continue
+                        if client.guess_board[move_y][move_x] != EMPTY:
+                            print(f"{Fore.RED}You already guessed that spot!")
+                            continue
+                    else:
+                        move_x = move[0]
+                        move_y = move[1]
                     break
 
                 except (ValueError, IndexError):
                     print(f"{Fore.RED}Please input valid formatting: \"x, y\"")
                     continue
 
-            # Send the powerup to the server
+            # Send the powerup and move to the server
             send(client_socket, powerup, False)
-
-            # Send the move to the server
             send(client_socket, (move_x, move_y), True)
 
             # Recieve if a ship was sunk
