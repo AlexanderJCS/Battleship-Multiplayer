@@ -2,6 +2,8 @@
 
 A multiplayer Battleship game in Python.
 
+**This project is discontinued and is in a buggy state.**
+
 TO RUN A SERVER:
 1. Download server.py and open it with an IDE. Under the IP constant, change it to your local ip. On windows, you can find this under the default gateway in ipconfig.
 2. Run server.py.
